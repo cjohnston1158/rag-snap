@@ -28,7 +28,7 @@ using any `knowledge` sub-command.
 | `knowledge forget <name> <source-id>` | Remove a source and all its chunks |
 | `knowledge delete <name>` | Delete an entire knowledge base |
 | `knowledge export <name>` | Back up a knowledge base to a directory or `.tar.gz` archive |
-| `knowledge import [name]` | Restore a knowledge base from an export directory or archive |
+| `knowledge import [name]` | Restore a knowledge base from a local export or a Google Drive folder/file |
 
 ---
 
@@ -456,26 +456,40 @@ rag-cli.rag knowledge export project-docs --output /mnt/backups/project-docs --c
 
 ### `knowledge import`
 
-Restore a knowledge base from an export directory or a `.tar.gz` archive produced by
-`knowledge export`. Pre-computed embeddings are imported as-is, so no re-embedding step is
-needed and no ML models need to be running during import.
+Restore a knowledge base from an export produced by `knowledge export`. Pre-computed embeddings
+are imported as-is — no re-embedding step is needed and no ML models need to be running during
+import.
+
+Two source types are supported:
+
+- **Local** (`--input`) — a directory or `.tar.gz` archive on the local filesystem.
+- **Google Drive** (`--url`) — a shared Drive folder containing one or more `.tar.gz` archives,
+  or a direct link to a single `.tar.gz` file.
 
 If a knowledge base name is omitted, the name stored in the export manifest is used automatically.
 Provide a name to restore under a different name (e.g. to clone or migrate a base).
 
 ```
-rag-cli.rag knowledge import [knowledge_base_name] --input <path> [--force]
+rag-cli.rag knowledge import [knowledge_base_name] (--input <path> | --url <gdrive-url>) [flags]
 ```
 
 | Flag | Short | Required | Description |
 |---|---|---|---|
-| `--input` | `-i` | Yes | Path to the export directory or `.tar.gz` archive |
+| `--input` | `-i` | one of two | Path to the export directory or `.tar.gz` archive |
+| `--url` | `-u` | one of two | Google Drive folder or file URL to import from |
+| `--all` | | No | Import all archives from a Drive folder without interactive selection |
 | `--force` | | No | Overwrite even if the target index already contains documents |
 
-The input format is detected automatically:
+`--input` and `--url` are mutually exclusive.
+
+The local input format is detected automatically:
 
 - **Directory** — used directly as the export root.
 - **`.tar.gz` file** — extracted into a temporary directory, imported, then cleaned up.
+
+---
+
+#### Local import
 
 **Example — restore using the original name (from manifest)**
 
@@ -489,7 +503,7 @@ Importing source metadata...
 
 Import complete.
   Sources imported: 3
-  Chunks expected:  228 (from manifest)
+  Chunks imported:  228
 ```
 
 **Example — restore under a different name**
@@ -503,6 +517,82 @@ rag-cli.rag knowledge import project-docs-staging --input ./project-docs-export.
 ```bash
 rag-cli.rag knowledge import project-docs --input ./project-docs-export --force
 ```
+
+---
+
+#### Google Drive import
+
+Archives are fetched directly from a shared Google Drive folder or file. On the first run you are
+prompted to authenticate with your Google account through a browser. The token is cached
+automatically and silently refreshed on subsequent runs — you will only need to authenticate once.
+
+Supported Drive URL formats:
+
+| URL form | Behaviour |
+|---|---|
+| `https://drive.google.com/drive/folders/FOLDER_ID` | List all `.tar.gz` files in the folder |
+| `https://drive.google.com/drive/u/0/folders/FOLDER_ID` | Same, user-scoped variant |
+| `https://drive.google.com/file/d/FILE_ID/view` | Download that single file directly |
+| `https://drive.google.com/uc?id=FILE_ID` | Download that single file directly |
+| `https://drive.google.com/open?id=FILE_ID` | Download that single file directly |
+
+**Example — import from a Drive folder (interactive selection)**
+
+```bash
+$ rag-cli.rag knowledge import --url "https://drive.google.com/drive/folders/FOLDER_ID"
+
+Listing archives in Google Drive folder...
+
+  Select archives to import
+  > [x] project-docs-export.tar.gz (12.4 MB)
+    [ ] scratch-export.tar.gz (1.1 MB)
+    [x] wiki-rag-export.tar.gz (9.3 MB)
+
+[1/2] Downloading project-docs-export.tar.gz...
+  Importing as knowledge base "project-docs"...
+  Importing mapping...
+  Importing document data...
+  Importing source metadata...
+
+  Import complete.
+    Sources imported: 3
+    Chunks imported:  228
+
+[2/2] Downloading wiki-rag-export.tar.gz...
+  Importing as knowledge base "wiki-rag"...
+  ...
+```
+
+Use Space to toggle archives, Enter to confirm, Esc/Ctrl-C to cancel the selection.
+
+**Example — import all archives from a folder without prompting**
+
+```bash
+rag-cli.rag knowledge import --url "https://drive.google.com/drive/folders/FOLDER_ID" --all
+```
+
+**Example — import a single file from Drive**
+
+```bash
+rag-cli.rag knowledge import --url "https://drive.google.com/file/d/FILE_ID/view"
+```
+
+**Example — restore a Drive archive under a different name**
+
+```bash
+rag-cli.rag knowledge import project-docs-staging \
+    --url "https://drive.google.com/file/d/FILE_ID/view"
+```
+
+> **Note on authentication:** `knowledge import --url` requires a Google account that has at least
+> viewer access to the Drive resource. The OAuth token is cached at
+> `~/.config/rag-cli/gdrive-token.json` (or `$SNAP_USER_DATA/gdrive-token.json` when running as a
+> snap). Delete this file to force re-authentication.
+
+> **Note on KB naming:** When importing from a folder, the knowledge base name is derived from the
+> archive filename by stripping `.tar.gz` and a trailing `-export` suffix
+> (e.g. `project-docs-export.tar.gz` → `project-docs`). Pass `[knowledge_base_name]` to override
+> this for all archives in the batch, or use `--input` with a single archive for precise control.
 
 > **Note on infrastructure:** `knowledge import` automatically ensures the index template and
 > sources metadata index exist before importing. You do not need to run `knowledge init` first,
@@ -572,6 +662,8 @@ rag-cli.rag knowledge export project-docs --compress
 # 8. Restore on another machine (or under a new name)
 rag-cli.rag knowledge import --input ./project-docs-export.tar.gz
 rag-cli.rag knowledge import project-docs-v2 --input ./project-docs-export.tar.gz
+# or pull directly from a shared Drive folder
+rag-cli.rag knowledge import --url "https://drive.google.com/drive/folders/FOLDER_ID" --all
 
 # 9. Clean up when the project is archived
 rag-cli.rag knowledge delete project-docs
@@ -814,6 +906,7 @@ compliance questionnaires, and documentation audits.
 | Command | Description |
 |---|---|
 | `answer batch <manifest.yaml>` | Run questions from a YAML file and export answers to JSON |
+| `answer batch --build <document>` | Extract RFP/RFI questions from a document and generate a batch manifest |
 
 ---
 
@@ -912,5 +1005,183 @@ Results are written to `batch-results-YYYYMMDD-HHMMSS.json` in the current worki
 > **Note on model selection:** If the inference server does not support model auto-detection
 > (e.g. AWS Bedrock), set the model explicitly in the manifest or configure a default with
 > `sudo rag-cli.rag set --package chat.model="<model-id>"` once after installation.
+
+---
+
+### `answer batch --build`
+
+Parse an RFP or RFI document (PDF, DOCX, XLSX, or CSV), guide through format-specific extraction
+options, and produce a YAML manifest ready to feed into `answer batch`. This is the recommended way
+to turn a vendor questionnaire into an answerable batch job without manually copying questions.
+
+```
+rag-cli.rag answer batch --build <document-path> [--output <path>] [--preview]
+```
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--build` | | _(required)_ | Document path to extract RFP/RFI questions from |
+| `--output` | `-o` | `<document-name>-rfp.yaml` | Output YAML manifest path |
+| `--preview` | | `false` | Print extracted questions without writing the manifest |
+
+The command detects the file format from the extension and asks format-specific questions before
+extracting. After extraction you review every question in an interactive multi-select (all checked
+by default) and remove any that do not belong. Remaining questions are renumbered consecutively
+before the manifest is written.
+
+---
+
+### Supported formats
+
+#### CSV
+
+The header row is read and shown. Select which column contains the question text — single-column
+files skip the prompt automatically. Every subsequent non-empty row in that column becomes a
+question.
+
+#### XLSX
+
+Apache Tika converts the workbook to HTML. Each `<table>` element found in the HTML becomes a
+selectable entry. You can select multiple tables (e.g. several sheets from the same workbook) in
+one pass; each question is tagged with its sheet name in the `source` field.
+
+Interactive prompts:
+
+1. **Table selection** — multi-select over all detected tables. Labels show the sheet name and the
+   first three column headers as a preview. When a sheet contains more than one table the labels
+   read `Sheet Name — Table 1`, `Sheet Name — Table 2`, and so on.
+2. **Column selection** — choose which column holds the question text, based on the first selected
+   table's headers.
+3. **Force column** — optionally override the column by typing its number (e.g. `3` for column C).
+   Useful when header detection is incomplete.
+4. **Minimum length** — skip cells shorter than N characters to filter out section headings mixed
+   into the question column. Default is 20; enter `0` to include all cells.
+
+#### PDF / DOCX
+
+Apache Tika extracts content as HTML. You first choose how questions are structured in the
+document:
+
+**Numbered / bulleted list or question marks**
+
+Page boundaries are detected from Tika's `<div class="page">` elements, so the page count is
+accurate even for PDFs where form-feed separators are absent in plain-text mode. Prompts:
+
+1. **Page start** — which page do the questions begin on? Entering a page number skips cover pages
+   and table-of-contents sections that would otherwise be captured.
+2. **TOC filter** — optionally strip table-of-contents entries. Entries matching the pattern
+   `<section-number> <title> <page-number>` (e.g. `2.1 Background 5`) are removed. Applies to
+   dotted subsections as well as top-level sections.
+
+**Table — extract from a column**
+
+Tika HTML is scanned for `<table>` elements across the document. Prompts mirror the XLSX flow:
+table selection, column selection, column override, and minimum length. Use this mode when the RFP
+presents requirements or questions in a structured table rather than a numbered list.
+
+> **Note:** Tika does not always produce HTML `<table>` elements for PDF tables — some PDFs render
+> their tables as formatted plain text. If table mode reports "no HTML tables found", switch to
+> "Numbered / bulleted list or question marks" mode instead.
+
+---
+
+### Question review
+
+After extraction, all questions are presented in a scrollable multi-select with every item
+pre-checked. Press Space to uncheck (remove) entries that should not appear in the manifest, then
+Enter to confirm. If you deselect everything the extraction is cancelled and no file is written.
+Questions are renumbered `1, 2, 3, …` after any removals so the manifest has consecutive IDs.
+
+---
+
+### Output manifest
+
+The manifest is compatible with `answer batch` (same YAML schema). The `source` field is populated
+for XLSX and multi-table PDF extractions so you can trace each answer back to the original sheet or
+table.
+
+```yaml
+# Generated by rag-cli answer batch --build on 2026-04-29 10:00:00 UTC
+version: "1.0"
+knowledge_bases:
+  - project-docs
+questions:
+  - id: "1"
+    question: "Describe your approach to patch management."
+    source: "6 Project Background and Scope"
+  - id: "2"
+    question: "What SLA do you offer for critical incidents?"
+    source: "12 Operational Risk"
+```
+
+---
+
+### End-to-end example
+
+```bash
+# 1. Extract from a multi-sheet XLSX
+$ rag-cli.rag answer batch --build ~/rfp/vendor-questionnaire.xlsx
+
+Detected format: XLSX  (vendor-questionnaire.xlsx)
+
+  Which tables contain RFP questions?
+  > [x] 6 Project Background and Scope  (columns: # | Requirement | Vendor Response)
+    [x] 12 Operational Risk             (columns: # | Question | Notes)
+    [ ] Submit Response Instructions    (columns: Instructions)
+
+  Which column contains the question text?
+  > Column 2: Requirement
+
+  Force column number? (current: 2 — leave blank to keep, or enter e.g. 3 for column C):
+  > (Enter)
+
+  Minimum characters per cell to include as a question? (0 = no filter, default 20):
+  > (Enter)
+
+Extracted 48 question(s). Preview (first 5):
+
+  [1][6 Project Background and Scope] Describe the current infrastructure topology…
+  [2][6 Project Background and Scope] What virtualisation platforms are supported?…
+  …
+
+  Review 48 question(s) — uncheck to remove (Space to toggle, Enter to confirm):
+  > [x] [1][6 Project Background…] Describe the current infrastructure topology…
+    [x] [2][6 Project Background…] What virtualisation platforms are supported?…
+    [ ] [3][6 Project Background…] (section heading removed by unchecking)
+    …
+
+  Select knowledge bases: [x] project-docs
+
+  Output manifest path: vendor-questionnaire-rfp.yaml
+
+Manifest saved to vendor-questionnaire-rfp.yaml  (45 questions)
+Run: rag-cli answer batch vendor-questionnaire-rfp.yaml
+
+# 2. Answer the questions
+$ rag-cli.rag answer batch vendor-questionnaire-rfp.yaml
+```
+
+```bash
+# Extract from a PDF, skip cover and TOC (questions start on page 4)
+$ rag-cli.rag answer batch --build ~/rfp/orange-rfp.pdf
+
+Detected format: PDF  (orange-rfp.pdf)
+
+  How are questions structured in this document?
+  > Numbered / bulleted list or question marks
+
+  Document has 33 page(s).
+  Which page do the RFP questions start on? (1–33, default 1): 4
+
+  Apply table-of-contents filter? Yes, filter TOC entries
+
+Extracted 61 question(s). Preview (first 5):
+  …
+```
+
+```bash
+# Dry-run to inspect extraction before committing
+rag-cli.rag answer batch --build ~/rfp/ericsson.pdf --preview
+```
 
 ---
