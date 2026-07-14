@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
-import { useDarkMode } from "@/lib/useDarkMode";
-import { captureTokenFromUrl } from "@/lib/api/token";
-import { ApiError } from "@/lib/api/envelope";
+import { ApiError, errorMessage } from "@/lib/api/envelope";
 import { startChat, ChatConnection, type ChatFrame } from "@/lib/api/chat";
 import { listKnowledge, type KnowledgeBase } from "@/lib/api/knowledge";
 
@@ -21,7 +18,6 @@ interface Message {
 }
 
 export default function ChatScreen() {
-  const [darkMode, toggleDark] = useDarkMode();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [connState, setConnState] = useState<ConnState>("idle");
@@ -35,18 +31,14 @@ export default function ChatScreen() {
   // Whether the current assistant turn is still streaming (awaiting `done`).
   const awaitingDone = useRef(false);
 
-  // Capture a fragment token (if the launch flow used one) before any API call.
-  useEffect(() => {
-    captureTokenFromUrl();
-  }, []);
-
   // Load the available knowledge bases for the selector.
   useEffect(() => {
     listKnowledge()
       .then(setBases)
       .catch((e) => {
-        // A missing knowledge backend is not fatal to chat; surface softly.
-        if (e instanceof ApiError && e.code === 0) setError(e.message);
+        // A missing knowledge backend is not fatal to chat; surface softly. An
+        // unreachable daemon is, so it gets the standard connection error.
+        if (e instanceof ApiError && e.code === 0) setError(errorMessage(e));
       });
   }, []);
 
@@ -147,7 +139,7 @@ export default function ChatScreen() {
       conn.prompt(text);
     } catch (e) {
       awaitingDone.current = false;
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
       setMessages((prev) => {
         const next = [...prev];
         const last = next[next.length - 1];
@@ -183,32 +175,29 @@ export default function ChatScreen() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar darkMode={darkMode} onToggleDark={toggleDark} />
+    <>
+      <Header title="Chat">
+        <div className="chat__status">
+          <span
+            className={`app-status-dot ${
+              connState === "connected" ? "is-connected" : connState === "error" ? "is-error" : ""
+            }`}
+          />
+          <span className="u-text--muted p-text--small u-no-margin--bottom">
+            {connState === "connected"
+              ? model
+                ? `Connected · ${model}`
+                : "Connected"
+              : connState === "connecting"
+                ? "Connecting…"
+                : connState === "error"
+                  ? "Connection error"
+                  : "Ready"}
+          </span>
+        </div>
+      </Header>
 
-      <div className="app-content">
-        <Header title="Chat">
-          <div className="chat__status">
-            <span
-              className={`chat__status-dot ${
-                connState === "connected" ? "is-connected" : connState === "error" ? "is-error" : ""
-              }`}
-            />
-            <span className="u-text--muted p-text--small u-no-margin--bottom">
-              {connState === "connected"
-                ? model
-                  ? `Connected · ${model}`
-                  : "Connected"
-                : connState === "connecting"
-                  ? "Connecting…"
-                  : connState === "error"
-                    ? "Connection error"
-                    : "Ready"}
-            </span>
-          </div>
-        </Header>
-
-        <main className="app-main chat">
+      <main className="app-main chat">
         {bases.length > 0 && (
           <div className="kb-selector">
             <span className="kb-selector__label">Knowledge bases:</span>
@@ -269,8 +258,7 @@ export default function ChatScreen() {
             Send
           </button>
         </div>
-        </main>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }
