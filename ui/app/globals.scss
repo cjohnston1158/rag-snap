@@ -751,305 +751,224 @@ $sidebar-accent: #e95420; // Ubuntu orange
 }
 
 // ---------------------------------------------------------------------------
-// Status & configuration
+// Knowledge bases  --- knowledge ---
 // ---------------------------------------------------------------------------
 
-.status__zone {
-  margin-bottom: 2.5rem;
-}
-
-.status__zone-head {
+.kb__header {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.kb__intro {
+  max-width: 40rem;
+  margin: 0;
+}
+
+.kb__actions {
+  display: flex;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.status__zone-title {
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--vf-color-text-muted);
-  margin-bottom: 1rem;
-}
-
-.status__refresh {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-// Cards sit on a responsive grid: one column when the rail collapses, two when
-// there is room. The page itself never scrolls horizontally.
-.status__services {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.status-card {
-  padding: 1rem;
-  background-color: var(--vf-color-background-alt);
-  border: 1px solid var(--vf-color-border-default);
-  border-radius: 0.125rem;
-  margin: 0;
-}
-
-.status-card__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.status-card__title {
-  font-size: 1rem;
-  margin: 0;
-}
-
-.status-card__state {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.status-card__role {
-  margin: 0.25rem 0 0.75rem;
-}
-
-.status-card__endpoint .p-code-snippet__block {
-  font-size: 0.75rem;
-}
-
-// The diagnostic shown on an unreachable service: what to check next.
-.status-card__hint {
-  margin: 0.75rem 0 0;
-  padding-left: 0.75rem;
-  border-left: 2px solid var(--vf-color-border-caution);
-  color: var(--vf-color-text-muted);
-}
-
-.status-card__detail {
-  margin-top: 1rem;
-}
-
-.status-card__detail-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--vf-color-text-muted);
-  margin: 0 0 0.5rem;
-}
-
-.status-card__model {
-  margin-bottom: 0.75rem;
-
-  .p-code-snippet__block {
-    font-size: 0.75rem;
-  }
-}
-
-// A configured model that OpenSearch has not deployed: retrieval is broken and
-// nothing else says so, so it is called out rather than left to be inferred.
-.status-card__warning {
-  margin: 0.5rem 0 0;
-  padding-left: 0.75rem;
-  border-left: 2px solid var(--vf-color-border-negative);
-  color: var(--vf-color-text-muted);
-}
-
-.status-card__models {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    margin-bottom: 0.25rem;
-  }
-}
-
-.status-card__model-name {
-  font-family: unquote(vanilla-framework.$font-monospace);
-  word-break: break-all;
-}
-
-.status-card__line {
-  margin: 0 0 0.25rem;
-  word-break: break-all;
-}
-
-// A worked example of setting a key, sitting above the editable table.
-.status__config-example {
-  margin-bottom: 1.5rem;
-
-  p {
-    margin-bottom: 0.5rem;
-  }
-
-  .p-code-snippet {
-    max-width: 32rem;
-  }
-}
-
-.status__filter {
-  max-width: 24rem;
-  margin-bottom: 1rem;
-}
-
-// Wide tables scroll inside their own wrapper, never the page.
-.config-table__wrapper {
+// Tables scroll inside their own wrapper so the page never scrolls sideways.
+.kb__table-wrap {
   overflow-x: auto;
 }
 
-.config-table {
-  width: 100%;
-  // Honour the column widths below rather than letting content (a long value or
-  // an endpoint) stretch a column past its share.
-  table-layout: fixed;
+// List row-action cell (Open/Export/Delete): a right-aligned horizontal row,
+// vertically centered and evenly spaced.
+.kb-actions-cell {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
 
-  td,
-  th {
-    vertical-align: top;
+// Detail row-action stack (Metadata/Forget): the buttons stack vertically and
+// stretch to equal width, so their left and right edges line up. inline-flex so
+// the stack shrinks to the widest button rather than filling the whole cell.
+.kb-actions-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+// Bordered row-action buttons (Open/Export/Delete, Metadata/Forget). A visible
+// border makes them read as buttons; hover uses Vanilla's neutral highlight
+// token so it reads correctly in both themes. Text is centered within the
+// equal-width stacked buttons.
+.kb-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--vf-color-border-default);
+  border-radius: 0.125rem;
+
+  &:hover {
+    background-color: var(--vf-color-background-hover);
   }
 }
 
-.config-table__key code {
-  word-break: break-all;
+.kb-detail__breadcrumb {
+  margin-bottom: 0.5rem;
 }
 
-// Value gets the room: it holds what the user is here to read and edit. Layer and
-// the controls need only fit a chip and two buttons, so they take fixed widths and
-// hand the rest of the table back to Value.
-.config-table__col--key {
-  width: 30%;
-}
-
-.config-table__col--value {
-  width: auto;
-}
-
-.config-table__col--layer {
-  width: 6rem;
-}
-
-.config-table__col--actions {
-  width: 7rem;
-}
-
-.config-table__shown {
-  word-break: break-all;
-}
-
-.config-table__redacted {
-  color: var(--vf-color-text-muted);
-  letter-spacing: 0.125em;
-}
-
-.config-table__actions {
+.kb-detail__progress {
   display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+}
+
+// Ingest source tabs: the two radio choices sit in a row, vertically aligned,
+// with the default per-radio bottom margin removed so they line up.
+.kb-ingest__tabs {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+
+  .p-radio {
+    margin-bottom: 0;
+  }
+}
+
+// Metadata definition list: label/value rows.
+.kb-meta__list {
+  margin: 0 0 1rem;
+}
+
+.kb-meta__row {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
   gap: 0.5rem;
+  padding: 0.25rem 0;
+
+  dd {
+    margin: 0;
+    word-break: break-word;
+  }
+}
+
+// Unsupported batch entries are muted to read as excluded.
+.kb-batch__row--skip {
+  opacity: 0.6;
+}
+
+// Dropzone: a dashed drop area wrapping a native file input. The native input is
+// the real keyboard/AT path; hover/drag gives a positive border cue.
+.app-dropzone {
+  border: 1px dashed var(--vf-color-border-default);
+  border-radius: 0.125rem;
+  padding: 1rem;
+  text-align: center;
+
+  &.is-over {
+    border-color: var(--vf-color-border-positive);
+  }
+}
+
+.app-dropzone__label {
+  display: block;
+  font-weight: 400;
+}
+
+.app-dropzone__hint {
+  margin: 0.5rem 0 0;
+}
+
+@media (max-width: 620px) {
+  .kb-meta__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Google Drive import  --- gdrive import ---
+// ---------------------------------------------------------------------------
+.gdrive-import {
   margin-top: 0.5rem;
 }
 
-.config-table__controls {
+// Connected-account bar shown above the locate/pick steps.
+.gdrive-import__account {
   display: flex;
-  gap: 0.25rem;
-  justify-content: flex-end;
-}
-
-// ---------------------------------------------------------------------------
-// Search page  --- search ---
-// ---------------------------------------------------------------------------
-
-.search__bar {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
   margin-bottom: 1rem;
+  border-bottom: 1px solid var(--vf-color-border-default);
 }
 
-// Scope row: KB chips + the Results (top-k) select, wrapping on narrow widths.
-.search__scope {
+.gdrive-import__loading,
+.gdrive-import__waiting {
+  padding: 0.5rem 0;
+}
+
+// Connect card: centered icon + one sentence + the connect action.
+.gdrive-import__connect-card {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  border: 1px solid var(--vf-color-border-default);
+  border-radius: 0.125rem;
+  background-color: var(--vf-color-background-alt);
 }
 
-.search__scope-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+.gdrive-import__icon {
   color: var(--vf-color-text-muted);
 }
 
-.search__scope-hint {
-  color: var(--vf-color-text-muted);
+// Archive checkbox group: scrolls within its own box when long.
+.gdrive-import__list {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 1px solid var(--vf-color-border-default);
+  border-radius: 0.125rem;
+  max-height: 18rem;
+  overflow-y: auto;
 }
 
-.search__topk {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
+// Select-all header row: a single-line Vanilla checkbox with a divider under it.
+.gdrive-import__selectall {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--vf-color-border-default);
+  font-weight: 500;
+}
 
-  select {
-    margin-bottom: 0;
-    min-width: 4.5rem;
+// Archive row: the checkbox (name) on the left, meta pushed to the right. The
+// checkbox keeps a single-line Vanilla label so its box + tick render correctly.
+.gdrive-import__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--vf-color-border-default);
   }
 }
 
-.search__count {
-  min-height: 1.25rem; // reserve the line so announcing results doesn't shift layout
-}
-
-.search__list {
-  list-style: none;
+.gdrive-import__item-check {
   margin: 0;
-  padding: 0;
+  min-width: 0;
+
+  .p-checkbox__label {
+    word-break: break-word;
+  }
 }
 
-.search-result {
-  padding: 1rem;
-  background-color: var(--vf-color-background-alt);
-  border: 1px solid var(--vf-color-border-default);
-  border-radius: 0.125rem;
-  margin-bottom: 1rem;
-}
-
-.search-result__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.search-result__source {
-  word-break: break-all;
-}
-
-// Score sits right-aligned in the header; tabular digits keep ranks comparable.
-.search-result__score {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
+.gdrive-import__meta {
+  flex-shrink: 0;
   white-space: nowrap;
-}
-
-// Full chunk text, paragraph breaks preserved, never truncated. Long unbroken
-// tokens wrap rather than forcing the page to scroll horizontally.
-.search-result__body {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  margin: 0.75rem 0;
-}
-
-.search-result__footer {
-  margin: 0;
-  word-break: break-all;
 }
