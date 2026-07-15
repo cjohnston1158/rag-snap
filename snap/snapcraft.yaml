@@ -1,5 +1,5 @@
 name: rag-cli
-base: core24
+base: core26
 
 version: &snap-version "0.0.5"
 summary: RAG CLI application
